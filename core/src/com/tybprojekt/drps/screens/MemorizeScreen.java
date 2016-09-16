@@ -103,6 +103,8 @@ public class MemorizeScreen extends BaseScreen {
 	public void show() {
 		choices = new Group();
 		
+		textMemorize.addAction(Actions.alpha(1));
+		textReady.setVisible(false);
 		textMemorize.setPosition(0, -80, Align.center);
 		for (int i = 0; i <= StaticData.LEVEL; i++) {
 			Image enemyChoice = new Image(enemyChoices[i].sprite);
@@ -150,6 +152,9 @@ public class MemorizeScreen extends BaseScreen {
 		stage.addActor(textMemorize);
 		
 		stage.addActor(choices);
+
+//		game.screenStack.push(game.getScreen());
+//		game.setScreen(new BattleScreen(game));
 	}
 
 	@Override

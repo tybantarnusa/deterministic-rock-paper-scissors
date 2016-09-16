@@ -5,6 +5,9 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.Texture.TextureFilter;
+import com.badlogic.gdx.math.Interpolation;
+import com.badlogic.gdx.scenes.scene2d.Action;
+import com.badlogic.gdx.scenes.scene2d.actions.Actions;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.utils.Align;
 import com.tybprojekt.drps.Methods;
@@ -18,11 +21,17 @@ public class BattleScreen extends BaseScreen {
 	private Image paper;
 	private Image scissors;
 	
+	private Image enemys;
+	private Image yours;
+	
 	private State currentState;
 	private int result;
 	private int iteration;
 	
+	private float timeLeft;
+	
 	private enum State {
+		STANDBY,
 		CHOOSING,
 		RESULT
 	}
@@ -54,12 +63,13 @@ public class BattleScreen extends BaseScreen {
 
 	@Override
 	public void show() {
+		timeLeft = 10;
 		float choicesYPos = -100;
 		rock.setPosition(-250, choicesYPos, Align.center);
 		paper.setPosition(0, choicesYPos, Align.center);
 		scissors.setPosition(250, choicesYPos, Align.center);
 		
-		currentState = State.CHOOSING;
+		currentState = State.STANDBY;
 		result = -2;
 		iteration = 0;
 	}
@@ -75,8 +85,30 @@ public class BattleScreen extends BaseScreen {
 	public void update(float delta) {
 		stage.act(delta);
 		
+		if (currentState == State.STANDBY) {
+			if (enemys == null) {
+				Image _img = new Image(StaticData.ENEMY_CHOICES[iteration].sprite);
+				_img.setScale(0f);
+				_img.setPosition(0, 100, Align.center);
+				_img.setOrigin(Align.center);
+				enemys = _img;
+				enemys.addAction(Actions.sequence(
+					Actions.scaleTo(0.5f, 0.5f, 0.2f, Interpolation.pow2),
+					new Action() {
+						@Override
+						public boolean act(float delta) {
+							toChoosingState();
+							return true;
+						}
+					}
+				));
+				stage.addActor(enemys);
+				
+			}
+		}
+		
 		if (currentState == State.CHOOSING) {
-			
+			timeLeft -= delta;
 			if (Gdx.input.isKeyJustPressed(Input.Keys.LEFT)) {
 				battle(Choice.ROCK, StaticData.ENEMY_CHOICES[iteration]);
 			} else if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) {
@@ -84,7 +116,60 @@ public class BattleScreen extends BaseScreen {
 			} else if (Gdx.input.isKeyJustPressed(Input.Keys.RIGHT)) {
 				battle(Choice.SCISSORS, StaticData.ENEMY_CHOICES[iteration]);
 			}
+			System.out.println(timeLeft);
+		}
+		System.out.println(currentState);
+		if (currentState == State.RESULT && result != -2 && enemys != null) {
+			if (result == 0) {
+				result = -2;
+				enemys.addAction(Actions.sequence(
+					new Action() {
+						@Override
+						public boolean act(float delta) {
+							choiceGoBack();
+							toChoosingState();
+							return true;
+						}
+					}
+				));
+			}
 			
+			if (result == -1) {
+				result = -2;
+				iteration++;
+				enemys.addAction(Actions.sequence(
+					Actions.moveToAligned(0, -10, Align.center, 0.25f, Interpolation.pow5),
+					Actions.scaleTo(0, 0),
+					new Action() {
+						@Override
+						public boolean act(float delta) {
+							choiceGoBack();
+							toStandbyState();
+							return true;
+						}
+					}
+				));
+			}
+			
+			if (result == 1) {
+				result = -2;
+				iteration++;
+				enemys.addAction(Actions.sequence(
+					Actions.fadeOut(0.25f, Interpolation.pow2),
+					new Action() {
+						@Override
+						public boolean act(float delta) {
+							choiceGoBack();
+							toStandbyState();
+							return true;
+						}
+					}
+				));
+			}
+		}
+		
+		if (currentState == State.RESULT && result == -2) {
+			currentState = State.CHOOSING;
 		}
 		
 		if (iteration >= StaticData.LEVEL) {
@@ -94,9 +179,60 @@ public class BattleScreen extends BaseScreen {
 	
 	private void battle(Choice player, Choice enemy) {
 		result = Methods.battle(player, enemy);
-		iteration++;
-		System.out.println(player + " vs " + enemy + ": " + result);
-//		currentState = State.RESULT;
+		switch (player) {
+		case ROCK:
+			yours = rock;
+			break;
+		case PAPER:
+			yours = paper;
+			break;
+		case SCISSORS:
+			yours = scissors;
+			break;
+		}
+		chooseAnimation();
+	}
+	
+	private void chooseAnimation() {
+		Action toResultStateAction = new Action() {
+			public boolean act(float delta) {
+				toResultState();
+				return true;
+			}
+		};
+		
+		yours.addAction(Actions.sequence(
+			Actions.moveToAligned(0, -10, Align.center, 0.25f, Interpolation.pow2),
+			toResultStateAction
+		));
+	}
+	
+	private void choiceGoBack() {
+		float choicesYPos = -100;
+		rock.addAction(Actions.moveToAligned(-250, choicesYPos, Align.center, 0.2f, Interpolation.pow2));
+		paper.addAction(Actions.moveToAligned(0, choicesYPos, Align.center, 0.2f, Interpolation.pow2));
+		scissors.addAction(Actions.moveToAligned(250, choicesYPos, Align.center, 0.2f, Interpolation.pow2));
+	}
+	
+	private void toStandbyState() {
+		enemys = null;
+		result = -2;
+		currentState = State.STANDBY;
+	}
+	
+	private void toChoosingState() {
+		currentState = State.CHOOSING;
+	}
+	
+	private void toResultState() {
+		currentState = State.RESULT;
+	}
+	
+	private String resultToString(int result) {
+		if (result == -2) return "Null";
+		if (result == -1) return "Lose";
+		if (result == 0) return "Draw";
+		return "Win";
 	}
 
 	@Override

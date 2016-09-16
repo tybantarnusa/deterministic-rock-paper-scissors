@@ -4,7 +4,6 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.Texture.TextureFilter;
-import com.badlogic.gdx.math.Interpolation;
 import com.badlogic.gdx.scenes.scene2d.Group;
 import com.badlogic.gdx.scenes.scene2d.actions.Actions;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
@@ -97,6 +96,7 @@ public class MemorizeScreen extends BaseScreen {
 			Choice.SCISSORS,
 			Choice.ROCK
 		};
+		StaticData.ENEMY_CHOICES = enemyChoices;
 	}
 
 	@Override
@@ -136,7 +136,8 @@ public class MemorizeScreen extends BaseScreen {
 							Actions.run(new Runnable(){
 								public void run() {
 									StaticData.LEVEL++;
-									game.setScreen(new MemorizeScreen(game));
+									game.screenStack.push(game.getScreen());
+									game.setScreen(new BattleScreen(game));
 								}
 							})
 						));
@@ -189,7 +190,8 @@ public class MemorizeScreen extends BaseScreen {
 
 	@Override
 	public void dispose() {
-		
+		stage.dispose();
+		bg.dispose();
 	}
 
 }

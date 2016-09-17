@@ -7,6 +7,7 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.Texture.TextureFilter;
 import com.badlogic.gdx.math.Interpolation;
 import com.badlogic.gdx.scenes.scene2d.Action;
+import com.badlogic.gdx.scenes.scene2d.Group;
 import com.badlogic.gdx.scenes.scene2d.actions.Actions;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.utils.Align;
@@ -29,6 +30,8 @@ public class BattleScreen extends BaseScreen {
 	private int iteration;
 	
 	private float timeLeft;
+	private Image timeGauge;
+	private Group timer;
 	
 	private enum State {
 		STANDBY,
@@ -59,6 +62,39 @@ public class BattleScreen extends BaseScreen {
 		stage.addActor(rock);
 		stage.addActor(paper);
 		stage.addActor(scissors);
+		
+		makeTimerUI();
+	}
+	
+	private void makeTimerUI() {
+		timer = new Group();
+		
+		Image _img;
+		
+		_img = new Image(loadTexture("timebar_l1.png"));
+		_img.setPosition(0, 286, Align.center);
+		timer.addActor(_img);
+		
+		timeGauge = _img = new Image(loadTexture("timegauge.png"));
+		_img.setPosition(-392, 286, Align.center);
+		_img.setSize(788f, 21);
+		timer.addActor(_img);
+		
+		_img = new Image(loadTexture("timebar_l2.png"));
+		_img.setPosition(timeGaugeSize(), 286, Align.center);
+		timer.addActor(_img);
+		
+		stage.addActor(timer);
+	}
+	
+	private Texture loadTexture(String path) {
+		Texture _tex = new Texture(path);
+		_tex.setFilter(TextureFilter.Linear, TextureFilter.Linear);
+		return _tex;
+	}
+	
+	private float timeGaugeSize() {
+		return timeLeft / 10f * 788f;
 	}
 
 	@Override
@@ -77,6 +113,7 @@ public class BattleScreen extends BaseScreen {
 	@Override
 	public void render(float delta) {
 		update(delta);
+		Gdx.gl.glClearColor(0.8f, 0.8f, 0.8f, 1);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 		
 		stage.draw();
@@ -107,8 +144,9 @@ public class BattleScreen extends BaseScreen {
 			}
 		}
 		
-		if (currentState == State.CHOOSING) {
+		if (currentState == State.CHOOSING && result == -2) {
 			timeLeft -= delta;
+			timeGauge.setSize(timeGaugeSize(), 21);
 			if (Gdx.input.isKeyJustPressed(Input.Keys.LEFT)) {
 				battle(Choice.ROCK, StaticData.ENEMY_CHOICES[iteration]);
 			} else if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) {
@@ -116,9 +154,8 @@ public class BattleScreen extends BaseScreen {
 			} else if (Gdx.input.isKeyJustPressed(Input.Keys.RIGHT)) {
 				battle(Choice.SCISSORS, StaticData.ENEMY_CHOICES[iteration]);
 			}
-			System.out.println(timeLeft);
 		}
-		System.out.println(currentState);
+		System.out.println(currentState + " | " + result);
 		if (currentState == State.RESULT && result != -2 && enemys != null) {
 			if (result == 0) {
 				result = -2;
@@ -209,7 +246,16 @@ public class BattleScreen extends BaseScreen {
 	
 	private void choiceGoBack() {
 		float choicesYPos = -100;
-		rock.addAction(Actions.moveToAligned(-250, choicesYPos, Align.center, 0.2f, Interpolation.pow2));
+		rock.addAction(Actions.sequence(
+			Actions.moveToAligned(-250, choicesYPos, Align.center, 0.2f, Interpolation.pow2),
+			new Action() {
+				@Override
+				public boolean act(float delta) {
+					result = -2;
+					return true;
+				}
+			}
+		));
 		paper.addAction(Actions.moveToAligned(0, choicesYPos, Align.center, 0.2f, Interpolation.pow2));
 		scissors.addAction(Actions.moveToAligned(250, choicesYPos, Align.center, 0.2f, Interpolation.pow2));
 	}

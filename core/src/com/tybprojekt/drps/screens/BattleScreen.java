@@ -6,6 +6,7 @@ import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.Texture.TextureFilter;
 import com.badlogic.gdx.math.Interpolation;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.scenes.scene2d.Action;
 import com.badlogic.gdx.scenes.scene2d.Group;
 import com.badlogic.gdx.scenes.scene2d.actions.Actions;
@@ -36,6 +37,9 @@ public class BattleScreen extends BaseScreen {
 	
 	private Image hitGauge;
 	private Group hitter;
+	
+	private float shake;
+	private float hitShake;
 	
 	private enum State {
 		STANDBY,
@@ -102,6 +106,7 @@ public class BattleScreen extends BaseScreen {
 	
 	private void makeHPUI() {
 		hitter = new Group();
+		hitShake = 0;
 		
 		Image _img;
 		
@@ -147,6 +152,7 @@ public class BattleScreen extends BaseScreen {
 		currentState = State.STANDBY;
 		result = -2;
 		iteration = 0;
+		shake = 0;
 	}
 
 	@Override
@@ -154,13 +160,20 @@ public class BattleScreen extends BaseScreen {
 		update(delta);
 		Gdx.gl.glClearColor(0.8f, 0.8f, 0.8f, 1);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-		
 		stage.draw();
 	}
 	
 	public void update(float delta) {
 		stage.act(delta);
-		System.out.println(currentState + " | " + result);
+		
+		game.cam.position.x = MathUtils.random(-shake, shake);
+		game.cam.position.y = MathUtils.random(-shake, shake);
+		shake -= delta * 10;
+		if (shake <= 0.5f) shake = 0;
+		
+		hitter.setPosition(MathUtils.random(-hitShake, hitShake), MathUtils.random(-hitShake, hitShake));
+		hitShake -= delta * 10;
+		if (hitShake <= 0.5f) hitShake = 0;
 		
 		if (currentState == State.STANDBY && iteration < StaticData.LEVEL) {
 			if (enemys == null) {
@@ -207,6 +220,8 @@ public class BattleScreen extends BaseScreen {
 						@Override
 						public boolean act(float delta) {
 							choiceGoBack();
+							StaticData.HIT -= 1;
+							if (hitShake == 0) hitShake = 3;
 							return true;
 						}
 					},
@@ -215,7 +230,6 @@ public class BattleScreen extends BaseScreen {
 						@Override
 						public boolean act(float delta) {
 							toChoosingState();
-							StaticData.HIT -= 1;
 							return true;
 						}
 					}
@@ -225,13 +239,14 @@ public class BattleScreen extends BaseScreen {
 			else if (result == -1) {
 				result = -2;
 				iteration++;
-				StaticData.HIT -= 5;
 				enemys.addAction(Actions.sequence(
 					Actions.moveToAligned(0, -10, Align.center, 0.25f, Interpolation.pow5),
 					Actions.scaleTo(0, 0),
 					new Action() {
 						@Override
 						public boolean act(float delta) {
+							StaticData.HIT -= 5;
+							if (hitShake == 0) hitShake = 3;
 							choiceGoBack();
 							toStandbyState();
 							return true;
@@ -248,6 +263,7 @@ public class BattleScreen extends BaseScreen {
 					new Action() {
 						@Override
 						public boolean act(float delta) {
+							if (shake == 0) shake = 5;
 							choiceGoBack();
 							toStandbyState();
 							return true;
@@ -256,14 +272,21 @@ public class BattleScreen extends BaseScreen {
 				));
 			}
 		}
-		
+		System.out.println(shake);
 		if (currentState == State.TRANSITION && star.getScaleX() >= 1.2f) {
-			star.addAction(Actions.parallel(
-				Actions.scaleTo(0f, 0f, 0.4f, Interpolation.pow2Out),
-				Actions.rotateBy(-150f, 0.8f, Interpolation.pow3Out)
-			));
 			stage.addAction(Actions.sequence(
-				Actions.delay(2),
+				Actions.delay(0.5f),
+				new Action() {
+					public boolean act(float delta) {
+						star.addAction(Actions.parallel(
+							Actions.fadeOut(0.5f),
+							Actions.scaleTo(0f, 0f, 0.7f, Interpolation.pow2Out),
+							Actions.rotateBy(-150f, 5f, Interpolation.pow2Out)
+						));
+						return true;
+					}
+				},
+				Actions.delay(1.5f),
 				new Action() {
 					public boolean act(float delta) {
 						game.setScreen(game.screenStack.pop());

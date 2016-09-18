@@ -97,6 +97,7 @@ public class MemorizeScreen extends BaseScreen {
 			Choice.ROCK
 		};
 		StaticData.ENEMY_CHOICES = enemyChoices;
+		StaticData.HIT = 100;
 	}
 
 	@Override

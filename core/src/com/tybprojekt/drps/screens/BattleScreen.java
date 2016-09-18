@@ -24,6 +24,7 @@ public class BattleScreen extends BaseScreen {
 	
 	private Image enemys;
 	private Image yours;
+	private Image star;
 	
 	private State currentState;
 	private int result;
@@ -33,10 +34,14 @@ public class BattleScreen extends BaseScreen {
 	private Image timeGauge;
 	private Group timer;
 	
+	private Image hitGauge;
+	private Group hitter;
+	
 	private enum State {
 		STANDBY,
 		CHOOSING,
-		RESULT
+		RESULT,
+		TRANSITION
 	}
 	
 	public BattleScreen(MyGame game) {
@@ -59,11 +64,19 @@ public class BattleScreen extends BaseScreen {
 		scissors = new Image(_tex);
 		scissors.setScale(0.8f);
 		
+		_tex = loadTexture("star.png");
+		star = new Image(_tex);
+		star.setScale(0f);
+		star.setPosition(0, 100, Align.center);
+		star.setOrigin(Align.center);
+		
+		stage.addActor(star);
 		stage.addActor(rock);
 		stage.addActor(paper);
 		stage.addActor(scissors);
 		
 		makeTimerUI();
+		makeHPUI();
 	}
 	
 	private void makeTimerUI() {
@@ -81,10 +94,32 @@ public class BattleScreen extends BaseScreen {
 		timer.addActor(_img);
 		
 		_img = new Image(loadTexture("timebar_l2.png"));
-		_img.setPosition(timeGaugeSize(), 286, Align.center);
+		_img.setPosition(0, 286, Align.center);
 		timer.addActor(_img);
 		
 		stage.addActor(timer);
+	}
+	
+	private void makeHPUI() {
+		hitter = new Group();
+		
+		Image _img;
+		
+		_img = new Image(loadTexture("health_l1.png"));
+		_img.setPosition(-395, -256-(63/2f));
+		_img.setSize(790f, 63);
+		hitter.addActor(_img);
+		
+		hitGauge = _img = new Image(loadTexture("health.png"));
+		_img.setPosition(-395, -256-(63/2f));
+		_img.setSize(hitGaugeSize(), 63);
+		hitter.addActor(_img);
+		
+		_img = new Image(loadTexture("health_l2.png"));
+		_img.setPosition(0, -256, Align.center);
+		hitter.addActor(_img);
+		
+		stage.addActor(hitter);
 	}
 	
 	private Texture loadTexture(String path) {
@@ -95,6 +130,10 @@ public class BattleScreen extends BaseScreen {
 	
 	private float timeGaugeSize() {
 		return timeLeft / 10f * 788f;
+	}
+	
+	private float hitGaugeSize() {
+		return StaticData.HIT / 100f * 790f;
 	}
 
 	@Override
@@ -121,8 +160,9 @@ public class BattleScreen extends BaseScreen {
 	
 	public void update(float delta) {
 		stage.act(delta);
+		System.out.println(currentState + " | " + result);
 		
-		if (currentState == State.STANDBY) {
+		if (currentState == State.STANDBY && iteration < StaticData.LEVEL) {
 			if (enemys == null) {
 				Image _img = new Image(StaticData.ENEMY_CHOICES[iteration].sprite);
 				_img.setScale(0f);
@@ -141,6 +181,10 @@ public class BattleScreen extends BaseScreen {
 				));
 				stage.addActor(enemys);
 				
+				star.addAction(Actions.parallel(
+					Actions.scaleTo(1.2f, 1.2f, 0.4f, Interpolation.pow2),
+					Actions.rotateBy(-150f, 0.8f, Interpolation.pow3Out)
+				));
 			}
 		}
 		
@@ -155,7 +199,6 @@ public class BattleScreen extends BaseScreen {
 				battle(Choice.SCISSORS, StaticData.ENEMY_CHOICES[iteration]);
 			}
 		}
-		System.out.println(currentState + " | " + result);
 		if (currentState == State.RESULT && result != -2 && enemys != null) {
 			if (result == 0) {
 				result = -2;
@@ -164,16 +207,25 @@ public class BattleScreen extends BaseScreen {
 						@Override
 						public boolean act(float delta) {
 							choiceGoBack();
+							return true;
+						}
+					},
+					Actions.delay(0.2f),
+					new Action() {
+						@Override
+						public boolean act(float delta) {
 							toChoosingState();
+							StaticData.HIT -= 1;
 							return true;
 						}
 					}
 				));
 			}
 			
-			if (result == -1) {
+			else if (result == -1) {
 				result = -2;
 				iteration++;
+				StaticData.HIT -= 5;
 				enemys.addAction(Actions.sequence(
 					Actions.moveToAligned(0, -10, Align.center, 0.25f, Interpolation.pow5),
 					Actions.scaleTo(0, 0),
@@ -188,7 +240,7 @@ public class BattleScreen extends BaseScreen {
 				));
 			}
 			
-			if (result == 1) {
+			else if (result == 1) {
 				result = -2;
 				iteration++;
 				enemys.addAction(Actions.sequence(
@@ -205,13 +257,33 @@ public class BattleScreen extends BaseScreen {
 			}
 		}
 		
-		if (currentState == State.RESULT && result == -2) {
-			currentState = State.CHOOSING;
+		if (currentState == State.TRANSITION && star.getScaleX() >= 1.2f) {
+			star.addAction(Actions.parallel(
+				Actions.scaleTo(0f, 0f, 0.4f, Interpolation.pow2Out),
+				Actions.rotateBy(-150f, 0.8f, Interpolation.pow3Out)
+			));
+			stage.addAction(Actions.sequence(
+				Actions.delay(2),
+				new Action() {
+					public boolean act(float delta) {
+						game.setScreen(game.screenStack.pop());
+						return true;
+					}
+				}
+			));
 		}
 		
 		if (iteration >= StaticData.LEVEL) {
-			game.setScreen(game.screenStack.pop());
+			currentState = State.TRANSITION;
 		}
+		
+		if (timeLeft <= 0) {
+			timeLeft = 0;
+			StaticData.HIT -= 1;
+		}
+		
+		float targetSize = hitGauge.getWidth() + (hitGaugeSize() - hitGauge.getWidth()) * 0.3f;
+		hitGauge.setSize(targetSize, hitGauge.getHeight());
 	}
 	
 	private void battle(Choice player, Choice enemy) {
@@ -274,13 +346,6 @@ public class BattleScreen extends BaseScreen {
 		currentState = State.RESULT;
 	}
 	
-	private String resultToString(int result) {
-		if (result == -2) return "Null";
-		if (result == -1) return "Lose";
-		if (result == 0) return "Draw";
-		return "Win";
-	}
-
 	@Override
 	public void resize(int width, int height) {
 		stage.getViewport().update(width, height, false);

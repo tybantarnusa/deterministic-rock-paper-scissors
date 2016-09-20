@@ -57,13 +57,18 @@ public class BattleScreen extends BaseScreen {
 		STANDBY,
 		CHOOSING,
 		RESULT,
-		TRANSITION
+		TRANSITION,
+		GAMEOVER
 	}
 	
 	public BattleScreen(MyGame game) {
 		super(game);
 		
 		Texture _tex;
+		_tex = loadTexture("bg_battle.png");
+		Image _img = new Image(_tex);
+		_img.setPosition(0, 0, Align.center);
+		stage.addActor(_img);
 		
 		_tex = new Texture("c_batu.png");
 		_tex.setFilter(TextureFilter.Linear, TextureFilter.Linear);
@@ -97,7 +102,7 @@ public class BattleScreen extends BaseScreen {
 		comboTime = -1;
 		
 		skin = new Skin(Gdx.files.internal("skins/myskin.json"));
-		scoreLabel = new Label("Score: ", skin, "roboto-24", Color.BLACK);
+		scoreLabel = new Label("Score: ", skin, "roboto-24", new Color(31f/255f, 19f/255f, 2f/255f, 1f));
 		scoreLabel.setAlignment(Align.right);
 		scoreLabel.setText("Score:\r\n" + StaticData.SCORE);
 		scoreLabel.setPosition(320, 220);
@@ -128,11 +133,11 @@ public class BattleScreen extends BaseScreen {
 	private void makeComboUI() {
 		comboUI = new Group();
 		
-		comboLabel = new Label("", skin, "combo-big", Color.BLACK);
+		comboLabel = new Label("", skin, "combo-big", new Color(31f/255f, 19f/255f, 2f/255f, 1f));
 		comboLabel.setAlignment(Align.bottomRight);
 		comboLabel.getStyle().font.getRegion().getTexture().setFilter(TextureFilter.Linear, TextureFilter.Linear);
 		
-		Label tulisanCombo = new Label("Combo", skin, "combo-small", Color.BLACK);
+		Label tulisanCombo = new Label("Combo", skin, "combo-small", new Color(31f/255f, 19f/255f, 2f/255f, 1f));
 		tulisanCombo.setPosition(-(93-71), -(64-42));
 		tulisanCombo.getStyle().font.getRegion().getTexture().setFilter(TextureFilter.Linear, TextureFilter.Linear);
 		comboLabel.setPosition(-(93-74), -(53-37), Align.bottomRight);
@@ -195,7 +200,7 @@ public class BattleScreen extends BaseScreen {
 	}
 	
 	private float timeGaugeSize() {
-		return timeLeft / 10f * 788f;
+		return timeLeft / 5f * 788f;
 	}
 	
 	private float hitGaugeSize() {
@@ -204,7 +209,7 @@ public class BattleScreen extends BaseScreen {
 
 	@Override
 	public void show() {
-		timeLeft = 10;
+		timeLeft = 5;
 		float choicesYPos = -100;
 		rock.setPosition(-250, choicesYPos, Align.center);
 		paper.setPosition(0, choicesYPos, Align.center);
@@ -219,7 +224,7 @@ public class BattleScreen extends BaseScreen {
 	@Override
 	public void render(float delta) {
 		update(delta);
-		Gdx.gl.glClearColor(0.8f, 0.8f, 0.8f, 1);
+		Gdx.gl.glClearColor(0f, 0f, 0f, 1);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 		stage.draw();
 	}
@@ -237,7 +242,7 @@ public class BattleScreen extends BaseScreen {
 		
 		if (comboTime <= 0 && combo > 0) {
 			combo = 0;
-			comboUI.addAction(Actions.alpha(0, 0.05f));
+			comboUI.addAction(Actions.alpha(0, 0.075f));
 		}
 		
 		timeLabel.setText("" + ((int) timeLeft + 1));
@@ -245,6 +250,42 @@ public class BattleScreen extends BaseScreen {
 		hitter.setPosition(MathUtils.random(-hitShake, hitShake), MathUtils.random(-hitShake, hitShake));
 		hitShake -= delta * 10;
 		if (hitShake <= 0.5f) hitShake = 0;
+		
+		if (currentState != State.GAMEOVER && StaticData.HIT <= 0) {
+			currentState = State.GAMEOVER;
+			
+			Texture _tex;
+			_tex = loadTexture("game_over.png");
+			Image gameover = new Image(_tex);
+			gameover.setOrigin(Align.center);
+			gameover.setPosition(0, 500, Align.center);
+			gameover.addAction(Actions.scaleTo(1.5f, 1.5f));
+			stage.addActor(gameover);
+			
+			rock.addAction(Actions.moveBy(0, -300f, 0.5f, Interpolation.pow5In));
+			paper.addAction(Actions.sequence(Actions.delay(0.25f), Actions.moveBy(0, -300f, 0.5f, Interpolation.pow5In)));
+			scissors.addAction(Actions.sequence(Actions.delay(0.25f * 2), Actions.moveBy(0, -300f, 0.5f, Interpolation.pow5In)));
+		
+			gameover.addAction(Actions.sequence(
+				Actions.delay(0.25f * 3),
+				Actions.moveToAligned(0, 105, Align.center),
+				Actions.scaleTo(1f, 1f, 0.3f, Interpolation.bounceOut)
+			));
+			
+			scoreLabel.addAction(Actions.sequence(
+				Actions.delay(0.25f * 3 + 0.3f + 0.5f),
+				Actions.moveToAligned(0, -90f, Align.center, 0.8f, Interpolation.pow5Out),
+				Actions.delay(2f),
+				new Action() {
+					public boolean act(float delta) {
+						game.screenStack.pop();
+						StaticData.RESET();
+						game.setScreen(new MemorizeScreen(game));
+						return true;
+					}
+				}
+			));
+		}
 		
 		if (currentState == State.STANDBY && iteration < StaticData.LEVEL) {
 			if (enemys == null) {
@@ -291,7 +332,7 @@ public class BattleScreen extends BaseScreen {
 						@Override
 						public boolean act(float delta) {
 							choiceGoBack();
-							StaticData.HIT -= 1;
+							StaticData.HIT -= 3;
 							if (hitShake == 0) hitShake = 3;
 							comboTime = -1;
 							return true;
@@ -336,7 +377,7 @@ public class BattleScreen extends BaseScreen {
 						public boolean act(float delta) {
 							if (shake == 0) shake = 5;
 							StaticData.SCORE += 10;
-							comboTime = 1f;
+							comboTime = 1.275f;
 							if (comboTime > 0) combo++;
 							StaticData.SCORE += combo > 1 ? combo : 0;
 							
@@ -381,7 +422,6 @@ public class BattleScreen extends BaseScreen {
 				Actions.delay(1.5f),
 				new Action() {
 					public boolean act(float delta) {
-						dispose();
 						game.setScreen(game.screenStack.pop());
 						return true;
 					}

@@ -1,0 +1,24 @@
+{
+com.badlogic.gdx.graphics.g2d.BitmapFont: {
+	roboto-12: {
+		file: roboto-12.fnt
+	}
+	roboto-24: {
+		file: roboto-24.fnt
+	}
+	combo-big: {
+		file: combo-big.fnt
+	}
+	combo-small: {
+		file: combo-small.fnt
+	}
+}
+com.badlogic.gdx.graphics.Color: {
+	black: {
+		r: 0
+		g: 0
+		b: 0
+		a: 1
+	}
+}
+}

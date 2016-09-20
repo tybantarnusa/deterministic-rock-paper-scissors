@@ -2,6 +2,7 @@ package com.tybprojekt.drps.screens;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.Texture.TextureFilter;
@@ -11,6 +12,8 @@ import com.badlogic.gdx.scenes.scene2d.Action;
 import com.badlogic.gdx.scenes.scene2d.Group;
 import com.badlogic.gdx.scenes.scene2d.actions.Actions;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
+import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.utils.Align;
 import com.tybprojekt.drps.Methods;
 import com.tybprojekt.drps.MyGame;
@@ -19,6 +22,9 @@ import com.tybprojekt.drps.data.Choice;
 
 public class BattleScreen extends BaseScreen {
 
+	private Skin skin;
+	private Label scoreLabel;
+	
 	private Image rock;
 	private Image paper;
 	private Image scissors;
@@ -34,6 +40,12 @@ public class BattleScreen extends BaseScreen {
 	private float timeLeft;
 	private Image timeGauge;
 	private Group timer;
+	private Label timeLabel;
+	
+	private Group comboUI;
+	private Label comboLabel;
+	private float comboTime;
+	private int combo;
 	
 	private Image hitGauge;
 	private Group hitter;
@@ -81,6 +93,55 @@ public class BattleScreen extends BaseScreen {
 		
 		makeTimerUI();
 		makeHPUI();
+		
+		comboTime = -1;
+		
+		skin = new Skin(Gdx.files.internal("skins/myskin.json"));
+		scoreLabel = new Label("Score: ", skin, "roboto-24", Color.BLACK);
+		scoreLabel.setAlignment(Align.right);
+		scoreLabel.setText("Score:\r\n" + StaticData.SCORE);
+		scoreLabel.setPosition(320, 220);
+		scoreLabel.getStyle().font.getRegion().getTexture().setFilter(TextureFilter.Linear, TextureFilter.Linear);
+		stage.addActor(scoreLabel);
+		
+		timeLabel = new Label("", skin, "roboto-12", Color.BLACK);
+		timeLabel.setAlignment(Align.right);
+		timeLabel.setPosition(390, 285);
+		timeLabel.getStyle().font.getRegion().getTexture().setFilter(TextureFilter.Linear, TextureFilter.Linear);
+		stage.addActor(timeLabel);
+		makeUIDesc();
+		makeComboUI();
+	}
+	
+	private void makeUIDesc() {
+		Label _label = new Label("TIME", skin, "roboto-12", Color.BLACK);
+		_label.setPosition(-395, 255);
+		_label.getStyle().font.getRegion().getTexture().setFilter(TextureFilter.Linear, TextureFilter.Linear);
+		stage.addActor(_label);
+		_label = new Label("HIT METER", skin, "roboto-12", Color.BLACK);
+		_label.setPosition(-395, -223);
+		_label.getStyle().font.getRegion().getTexture().setFilter(TextureFilter.Linear, TextureFilter.Linear);
+		stage.addActor(_label);
+		
+	}
+	
+	private void makeComboUI() {
+		comboUI = new Group();
+		
+		comboLabel = new Label("", skin, "combo-big", Color.BLACK);
+		comboLabel.setAlignment(Align.bottomRight);
+		comboLabel.getStyle().font.getRegion().getTexture().setFilter(TextureFilter.Linear, TextureFilter.Linear);
+		
+		Label tulisanCombo = new Label("Combo", skin, "combo-small", Color.BLACK);
+		tulisanCombo.setPosition(-(93-71), -(64-42));
+		tulisanCombo.getStyle().font.getRegion().getTexture().setFilter(TextureFilter.Linear, TextureFilter.Linear);
+		comboLabel.setPosition(-(93-74), -(53-37), Align.bottomRight);
+		comboLabel.setOrigin(Align.center);
+		comboUI.addActor(tulisanCombo);
+		comboUI.addActor(comboLabel);
+		comboUI.setPosition(-(400-145), 300-125);
+		comboUI.addAction(Actions.alpha(0));
+		stage.addActor(comboUI);
 	}
 	
 	private void makeTimerUI() {
@@ -171,6 +232,16 @@ public class BattleScreen extends BaseScreen {
 		shake -= delta * 10;
 		if (shake <= 0.5f) shake = 0;
 		
+		comboTime -= delta;		
+		if (comboTime <= 0) comboTime = -1;
+		
+		if (comboTime <= 0 && combo > 0) {
+			combo = 0;
+			comboUI.addAction(Actions.alpha(0, 0.05f));
+		}
+		
+		timeLabel.setText("" + ((int) timeLeft + 1));
+		
 		hitter.setPosition(MathUtils.random(-hitShake, hitShake), MathUtils.random(-hitShake, hitShake));
 		hitShake -= delta * 10;
 		if (hitShake <= 0.5f) hitShake = 0;
@@ -222,6 +293,7 @@ public class BattleScreen extends BaseScreen {
 							choiceGoBack();
 							StaticData.HIT -= 1;
 							if (hitShake == 0) hitShake = 3;
+							comboTime = -1;
 							return true;
 						}
 					},
@@ -246,7 +318,8 @@ public class BattleScreen extends BaseScreen {
 						@Override
 						public boolean act(float delta) {
 							StaticData.HIT -= 5;
-							if (hitShake == 0) hitShake = 3;
+							if (hitShake == 0) hitShake = 4;
+							comboTime = -1;
 							choiceGoBack();
 							toStandbyState();
 							return true;
@@ -259,11 +332,31 @@ public class BattleScreen extends BaseScreen {
 				result = -2;
 				iteration++;
 				enemys.addAction(Actions.sequence(
+					new Action() {
+						public boolean act(float delta) {
+							if (shake == 0) shake = 5;
+							StaticData.SCORE += 10;
+							comboTime = 1f;
+							if (comboTime > 0) combo++;
+							StaticData.SCORE += combo > 1 ? combo : 0;
+							
+							comboLabel.setText("" + combo);
+							if (combo >= 2) {
+								comboUI.addAction(Actions.sequence(
+									Actions.scaleTo(1.35f, 1.35f),
+									Actions.alpha(1),
+									Actions.scaleTo(1, 1, 0.1f, Interpolation.pow2Out)
+								));
+							}
+							
+							scoreLabel.setText("Score:\r\n" + StaticData.SCORE);
+							return true;
+						}
+					},
 					Actions.fadeOut(0.25f, Interpolation.pow2),
 					new Action() {
 						@Override
 						public boolean act(float delta) {
-							if (shake == 0) shake = 5;
 							choiceGoBack();
 							toStandbyState();
 							return true;
@@ -272,7 +365,6 @@ public class BattleScreen extends BaseScreen {
 				));
 			}
 		}
-		System.out.println(shake);
 		if (currentState == State.TRANSITION && star.getScaleX() >= 1.2f) {
 			stage.addAction(Actions.sequence(
 				Actions.delay(0.5f),
@@ -289,6 +381,7 @@ public class BattleScreen extends BaseScreen {
 				Actions.delay(1.5f),
 				new Action() {
 					public boolean act(float delta) {
+						dispose();
 						game.setScreen(game.screenStack.pop());
 						return true;
 					}

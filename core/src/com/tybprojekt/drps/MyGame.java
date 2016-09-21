@@ -6,7 +6,7 @@ import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.tybprojekt.drps.screens.MemorizeScreen;
+import com.tybprojekt.drps.screens.TitleScreen;
 
 public class MyGame extends Game {
 	public SpriteBatch batch;
@@ -18,7 +18,7 @@ public class MyGame extends Game {
 		batch = new SpriteBatch();
 		cam = new OrthographicCamera(Constants.V_WIDTH, Constants.V_HEIGHT);
 		screenStack = new Stack<Screen>();
-		setScreen(new MemorizeScreen(this));
+		setScreen(new TitleScreen(this));
 	}
 
 	@Override

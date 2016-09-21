@@ -280,7 +280,7 @@ public class BattleScreen extends BaseScreen {
 					public boolean act(float delta) {
 						game.screenStack.pop();
 						StaticData.RESET();
-						game.setScreen(new MemorizeScreen(game));
+						game.setScreen(new TitleScreen(game));
 						return true;
 					}
 				}

@@ -1,6 +1,7 @@
 package com.tybprojekt.drps.screens;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.Texture.TextureFilter;
@@ -23,8 +24,11 @@ public class MemorizeScreen extends BaseScreen {
 	private Image textMemorize;
 	private Image textReady;
 	
+	private Music bgm;
+	
 	public MemorizeScreen(MyGame game) {
 		super(game);
+		bgm = Gdx.audio.newMusic(Gdx.files.internal("sounds/memorize.mp3"));
 		bg = new Texture("bg1.png");
 		bg.setFilter(TextureFilter.Linear, TextureFilter.Linear);
 		Texture _tex = new Texture("text1.png");
@@ -99,10 +103,14 @@ public class MemorizeScreen extends BaseScreen {
 		StaticData.ENEMY_CHOICES = enemyChoices;
 		StaticData.HIT = 100;
 		StaticData.SCORE = 0;
+		StaticData.MEMORIZE_SCREEN = this;
 	}
 
 	@Override
 	public void show() {
+		bgm.setLooping(true);
+		bgm.play();
+		
 		choices = new Group();
 		
 		textMemorize.addAction(Actions.alpha(1));
@@ -140,7 +148,7 @@ public class MemorizeScreen extends BaseScreen {
 							Actions.run(new Runnable(){
 								public void run() {
 									StaticData.LEVEL++;
-									game.screenStack.push(game.getScreen());
+									bgm.stop();
 									game.setScreen(new BattleScreen(game));
 								}
 							})
@@ -155,8 +163,6 @@ public class MemorizeScreen extends BaseScreen {
 		
 		stage.addActor(choices);
 
-//		game.screenStack.push(game.getScreen());
-//		game.setScreen(new BattleScreen(game));
 	}
 
 	@Override
@@ -199,6 +205,7 @@ public class MemorizeScreen extends BaseScreen {
 	public void dispose() {
 		stage.dispose();
 		bg.dispose();
+		bgm.dispose();
 	}
 
 }

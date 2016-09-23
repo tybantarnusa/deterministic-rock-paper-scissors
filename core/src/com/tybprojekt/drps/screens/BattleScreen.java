@@ -2,6 +2,8 @@ package com.tybprojekt.drps.screens;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.audio.Music;
+import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
@@ -53,6 +55,16 @@ public class BattleScreen extends BaseScreen {
 	private float shake;
 	private float hitShake;
 	
+	private Image left;
+	private Image right;
+	private Image down;
+	
+	private Music bgm;
+	private Sound ok;
+	private Sound nope;
+	private Sound hum;
+	private Sound over;
+	
 	private enum State {
 		STANDBY,
 		CHOOSING,
@@ -63,6 +75,12 @@ public class BattleScreen extends BaseScreen {
 	
 	public BattleScreen(MyGame game) {
 		super(game);
+		
+		bgm = Gdx.audio.newMusic(Gdx.files.internal("sounds/battle.mp3"));
+		ok = Gdx.audio.newSound(Gdx.files.internal("sounds/ok.mp3"));
+		nope = Gdx.audio.newSound(Gdx.files.internal("sounds/nope.mp3"));
+		hum = Gdx.audio.newSound(Gdx.files.internal("sounds/hum.mp3"));
+		over = Gdx.audio.newSound(Gdx.files.internal("sounds/gameover.mp3"));
 		
 		Texture _tex;
 		_tex = loadTexture("bg_battle.png");
@@ -91,6 +109,21 @@ public class BattleScreen extends BaseScreen {
 		star.setPosition(0, 100, Align.center);
 		star.setOrigin(Align.center);
 		
+		_tex = loadTexture("left.png");
+		left = new Image(_tex);
+		left.setPosition(-220, -160, Align.center);
+		left.setOrigin(Align.center);
+		
+		_tex = loadTexture("down.png");
+		down = new Image(_tex);
+		down.setPosition(60, -160, Align.center);
+		down.setOrigin(Align.center);
+		
+		_tex = loadTexture("right.png");
+		right = new Image(_tex);
+		right.setPosition(290, -160, Align.center);
+		right.setOrigin(Align.center);
+		
 		stage.addActor(star);
 		stage.addActor(rock);
 		stage.addActor(paper);
@@ -116,6 +149,10 @@ public class BattleScreen extends BaseScreen {
 		stage.addActor(timeLabel);
 		makeUIDesc();
 		makeComboUI();
+		
+		stage.addActor(left);
+		stage.addActor(down);
+		stage.addActor(right);
 	}
 	
 	private void makeUIDesc() {
@@ -219,6 +256,9 @@ public class BattleScreen extends BaseScreen {
 		result = -2;
 		iteration = 0;
 		shake = 0;
+		
+		bgm.setLooping(true);
+		bgm.play();
 	}
 
 	@Override
@@ -253,6 +293,8 @@ public class BattleScreen extends BaseScreen {
 		
 		if (currentState != State.GAMEOVER && StaticData.HIT <= 0) {
 			currentState = State.GAMEOVER;
+			bgm.stop();
+			over.play();
 			
 			Texture _tex;
 			_tex = loadTexture("game_over.png");
@@ -278,8 +320,8 @@ public class BattleScreen extends BaseScreen {
 				Actions.delay(2f),
 				new Action() {
 					public boolean act(float delta) {
-						game.screenStack.pop();
 						StaticData.RESET();
+						dispose();
 						game.setScreen(new TitleScreen(game));
 						return true;
 					}
@@ -334,6 +376,7 @@ public class BattleScreen extends BaseScreen {
 							choiceGoBack();
 							StaticData.HIT -= 3;
 							if (hitShake == 0) hitShake = 3;
+							hum.play();
 							comboTime = -1;
 							return true;
 						}
@@ -360,6 +403,7 @@ public class BattleScreen extends BaseScreen {
 						public boolean act(float delta) {
 							StaticData.HIT -= 5;
 							if (hitShake == 0) hitShake = 4;
+							nope.play();
 							comboTime = -1;
 							choiceGoBack();
 							toStandbyState();
@@ -389,6 +433,8 @@ public class BattleScreen extends BaseScreen {
 									Actions.scaleTo(1, 1, 0.1f, Interpolation.pow2Out)
 								));
 							}
+							
+							ok.play(1, MathUtils.clamp(1f + (0.04f * combo) - 0.04f, 0.5f, 2), 0);
 							
 							scoreLabel.setText("Score:\r\n" + StaticData.SCORE);
 							return true;
@@ -422,7 +468,9 @@ public class BattleScreen extends BaseScreen {
 				Actions.delay(1.5f),
 				new Action() {
 					public boolean act(float delta) {
-						game.setScreen(game.screenStack.pop());
+						bgm.stop();
+						dispose();
+						game.setScreen(StaticData.MEMORIZE_SCREEN);
 						return true;
 					}
 				}
@@ -436,6 +484,30 @@ public class BattleScreen extends BaseScreen {
 		if (timeLeft <= 0) {
 			timeLeft = 0;
 			StaticData.HIT -= 1;
+		}
+		
+		if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
+			left.setColor(Color.GREEN);
+			left.setScale(0.9f);
+		} else {
+			left.setColor(Color.WHITE);
+			left.setScale(1.1f);
+		}
+		
+		if (Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
+			down.setColor(Color.GREEN);
+			down.setScale(0.9f);
+		} else {
+			down.setColor(Color.WHITE);
+			down.setScale(1.1f);
+		}
+		
+		if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
+			right.setColor(Color.GREEN);
+			right.setScale(0.9f);
+		} else {
+			right.setColor(Color.WHITE);
+			right.setScale(1.1f);
 		}
 		
 		float targetSize = hitGauge.getWidth() + (hitGaugeSize() - hitGauge.getWidth()) * 0.3f;
@@ -525,6 +597,11 @@ public class BattleScreen extends BaseScreen {
 	@Override
 	public void dispose() {
 		stage.dispose();
+		ok.dispose();
+		nope.dispose();
+		hum.dispose();
+		bgm.dispose();
+		over.dispose();
 	}
 
 }

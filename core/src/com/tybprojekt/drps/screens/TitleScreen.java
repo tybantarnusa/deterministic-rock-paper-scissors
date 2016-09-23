@@ -2,9 +2,12 @@ package com.tybprojekt.drps.screens;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.audio.Music;
+import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.Texture.TextureFilter;
+import com.badlogic.gdx.scenes.scene2d.Action;
 import com.badlogic.gdx.scenes.scene2d.actions.Actions;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.utils.Align;
@@ -13,9 +16,14 @@ import com.tybprojekt.drps.MyGame;
 public class TitleScreen extends BaseScreen {
 
 	private Image pressStart;
+	private Music bgm;
+	private Sound confirm;
 	
 	public TitleScreen(final MyGame game) {
 		super(game);
+		
+		bgm = Gdx.audio.newMusic(Gdx.files.internal("sounds/title.mp3"));
+		confirm = Gdx.audio.newSound(Gdx.files.internal("sounds/decide.mp3"));
 		
 		Texture _tex = loadTexture("title.png");
 		Image _img = new Image(_tex);
@@ -36,6 +44,8 @@ public class TitleScreen extends BaseScreen {
 
 	@Override
 	public void show() {
+		bgm.setLooping(true);
+		bgm.play();
 		pressStart.addAction(Actions.forever(Actions.sequence(
 			Actions.fadeOut(0.7f),
 			Actions.delay(0.2f),
@@ -53,7 +63,23 @@ public class TitleScreen extends BaseScreen {
 		stage.draw();
 		
 		if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
-			game.setScreen(new MemorizeScreen(game));
+			stage.addAction(Actions.sequence(
+				new Action() {
+					public boolean act(float delta) {
+						confirm.play();
+						bgm.stop();
+						return true;
+					}
+				},
+				Actions.delay(0.4f),
+				new Action() {
+					public boolean act(float delta) {
+						game.setScreen(new MemorizeScreen(game));
+						return true;
+					}
+				}
+			));
+			
 		}
 	}
 
@@ -80,6 +106,8 @@ public class TitleScreen extends BaseScreen {
 	@Override
 	public void dispose() {
 		stage.dispose();
+		bgm.dispose();
+		confirm.dispose();
 	}
 
 }
